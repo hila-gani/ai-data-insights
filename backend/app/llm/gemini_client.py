@@ -20,7 +20,7 @@ def ask_gemini(prompt: str) -> str:
     try:
         model = genai.GenerativeModel("gemini-3.5-flash")
         response = model.generate_content(prompt)
-        return {"answer": response.text}
+        return response.text
 
     except Exception as e:
         return {"error": f"Gemini request failed: {str(e)}"}

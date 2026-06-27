@@ -2,8 +2,8 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import io
 from app.schemas import AskRequest
-from app.llm.gemini_client import ask_gemini
 from app.processor import get_data_summary
+from app.services.ask_service import answer_question
 import pandas as pd
 
 app = FastAPI()
@@ -99,49 +99,10 @@ def get_rows(limit: int = 50, offset: int = 0, search: str | None = None):
 @app.post("/ask")
 def ask_question(payload: AskRequest):
     """
-    Generates an AI-based answer using dataset statistics and sample context.    
-    
-    Args:
-        payload (AskRequest): An object containing the 'question' string.
-
-    Returns:
-        dict: A dictionary with 'question' and 'answer'.
+    Generates an AI-based answer using dataset statistics and sample context.
     """
     global dataset, dataset_summary
     if dataset is None:
         return {"error": "no dataset uploaded yet"}
 
-    question = payload.question
-    
-    context_text = dataset.head(50).to_csv(index=False)
-
-    # Secure prompt with guardrails to prevent unsafe output
-    prompt = f"""
-    You are a data assistant. The user uploaded a dataset.
-
-    Here is a summary of the full dataset:
-    {dataset_summary}
-
-    Here are sample rows from the dataset:
-    {context_text}
-
-    The user asks: "{question}"
-
-    Rules:
-    - Answer ONLY based on the data summary and sample rows provided above.
-    - If the answer cannot be found in the dataset summary or sample rows, say "I don't have enough information".
-    - Do NOT guess.
-    - Do NOT use external knowledge.
-    - Do NOT generate or execute code.
-    - Do NOT return Python, shell commands, SQL, or scripts of any kind.
-    - Keep the answer short and factual.
-    """
-
-    answer = ask_gemini(prompt)
-
-    # Security Guardrails: Check for dangerous patterns in the response
-    dangerous_patterns = ["import ", "rm -rf", "DROP TABLE", "exec(", "eval("]
-    if any(pattern in answer for pattern in dangerous_patterns):
-        answer = "Blocked unsafe output."
-
-    return {"answer": answer}
+    return answer_question(payload.question, dataset, dataset_summary)

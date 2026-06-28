@@ -1,19 +1,37 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import io
+import os
 from app.schemas import AskRequest
 from app.processor import get_data_summary
 from app.services.ask_service import answer_question
 import pandas as pd
 
+load_dotenv()
+
 app = FastAPI()
+
+frontend_origins = os.getenv("FRONTEND_ORIGINS")
+
+if not frontend_origins:
+    raise RuntimeError("FRONTEND_ORIGINS environment variable is not set")
+
+allowed_origins = [
+    origin.strip()
+    for origin in frontend_origins.split(",")
+    if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 dataset = None
 dataset_summary = None

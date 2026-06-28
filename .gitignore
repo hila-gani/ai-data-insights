@@ -93,3 +93,4 @@ Thumbs.db
 # OTHER
 # -------------------------
 __pypackages__/
+app_api.json

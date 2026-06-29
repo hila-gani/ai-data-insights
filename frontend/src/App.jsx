@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { uploadCsv } from './api';
+import { uploadCsv, fetchRows } from './api';
 import './App.css';
 
 function App() {
@@ -7,6 +7,8 @@ function App() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [rows, setRows] = useState([]);
+  const [totalRows, setTotalRows] = useState(0);
 
   function handleFileChange(event) {
     const file = event.target.files[0];
@@ -31,6 +33,11 @@ function App() {
 
     try {
       const result = await uploadCsv(selectedFile);
+      const rowsData = await fetchRows();
+
+      setRows(rowsData.rows);
+      setTotalRows(rowsData.total);
+
       setMessage(
         `${result.filename} uploaded successfully. ${result.rows_count} rows loaded.`
       );
@@ -84,6 +91,36 @@ function App() {
           </p>
         )}
       </section>
+
+      {rows.length > 0 && (
+      <section className="card">
+        <h2>Data preview</h2>
+
+        <p className="muted">
+          Showing {rows.length} of {totalRows} rows
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              {Object.keys(rows[0]).map((column) => (
+                <th key={column}>{column}</th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {Object.values(row).map((value, columnIndex) => (
+                  <td key={columnIndex}>{String(value)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    )}
     </main>
   );
 }

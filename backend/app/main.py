@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import io
 import os
@@ -7,8 +7,11 @@ from app.schemas import AskRequest
 from app.processor import get_data_summary
 from app.services.ask_service import answer_question
 import pandas as pd
+from pathlib import Path
 
-load_dotenv()
+# load_dotenv()
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BACKEND_DIR / ".env")
 
 app = FastAPI()
 
@@ -51,10 +54,13 @@ async def upload_csv(file: UploadFile = File(...)):
         message: Status message.
     """
     if not file.filename.lower().endswith(".csv"):
-        return {"error": "only CSV files are supported"}
-    
+        raise HTTPException(status_code=400, detail="only CSV files are supported")
+
     content = await file.read()
 
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    
     global dataset, dataset_summary
     dataset = pd.read_csv(io.BytesIO(content))
     dataset_summary = get_data_summary(dataset)
@@ -83,7 +89,7 @@ def get_rows(limit: int = 50, offset: int = 0, search: str | None = None):
     """
     global dataset
     if dataset is None:
-        return {"error": "no dataset uploaded yet"}
+        raise HTTPException(status_code=400, detail="No dataset uploaded yet")    
     
     df_filtered = dataset.copy()
 
@@ -120,7 +126,13 @@ def ask_question(payload: AskRequest):
     Generates an AI-based answer using dataset statistics and sample context.
     """
     global dataset, dataset_summary
-    if dataset is None:
-        return {"error": "no dataset uploaded yet"}
+    
+    question = payload.question.strip()
 
-    return answer_question(payload.question, dataset, dataset_summary)
+    if not question:
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+
+    if dataset is None:
+        raise HTTPException(status_code=400, detail="No dataset uploaded yet")
+
+    return answer_question(question, dataset, dataset_summary)

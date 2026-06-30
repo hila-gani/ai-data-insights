@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { uploadCsv, fetchRows } from './api';
+import { uploadCsv, fetchRows, askQuestion } from './api';
+import UploadDataset from './components/UploadDataset';
+import DataPreview from './components/DataPreview';
+import AskAi from './components/AskAi';
 import './App.css';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 function App() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -19,6 +22,10 @@ function App() {
 
   const [offset, setOffset] = useState(0);
 
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState('');
+  const [isAsking, setIsAsking] = useState(false);
+
   function handleFileChange(event) {
     const file = event.target.files[0];
 
@@ -26,6 +33,9 @@ function App() {
       setSelectedFile(file);
       setMessage('');
       setError('');
+      setQuestion('');
+      setAnswer('');
+
     }
   }
 
@@ -63,6 +73,8 @@ function App() {
       
       setSearchText('');
       setHasDataset(true);  
+      setQuestion('');
+      setAnswer('');
       
       await loadRows('', 0);
 
@@ -119,6 +131,37 @@ function App() {
     }
   }
 
+  async function handleAsk(event) {
+    event.preventDefault();
+
+    const trimmedQuestion = question.trim();
+
+    if (!trimmedQuestion) {
+      setError('Please enter a question first');
+      setAnswer('');
+      return;
+    }
+
+    if (!hasDataset) {
+      setError('Please upload a dataset first');
+      setAnswer('');
+      return;
+    }
+
+    setIsAsking(true);
+    setError('');
+    setAnswer('');
+
+    try {
+      const result = await askQuestion(trimmedQuestion);
+      setAnswer(result.answer ?? JSON.stringify(result, null, 2));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsAsking(false);
+    }
+  }
+
   const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
   const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
   const canGoPrevious = offset > 0;
@@ -128,119 +171,52 @@ function App() {
     <main className="app-container">
       <h1>AI Data Insights</h1>
 
-      <section className="card">
-        <h2>Upload dataset</h2>
-
-        <p>
-          Choose a CSV file to load into the application.
+      {message && (
+        <p className="success-message">
+          {message}
         </p>
-
-        <input
-          type="file"
-          accept=".csv"
-          onChange={handleFileChange}
-        />
-
-        <button
-          type="button"
-          onClick={handleUpload}
-          disabled={isUploading}
-        >
-          {isUploading ? 'Uploading...' : 'Upload CSV'}
-        </button>
-
-        {selectedFile && (
-          <p className="muted">
-            Selected file: {selectedFile.name}
-          </p>
-        )}
-
-        {message && (
-          <p className="success-message">
-            {message}
-          </p>
-        )}
-
-        {error && (
-          <p className="error-message">
-            {error}
-          </p>
-        )}
-      </section>
-
-     
-    {hasDataset && (
-    <section className="card">
-      <h2>Data preview</h2>
-
-      <form onSubmit={handleSearch} className="search-form">
-        <input
-          type="text"
-          placeholder="Search in the dataset..."
-          value={searchText}
-          onChange={(event) => setSearchText(event.target.value)}
-        />
-
-        <button type="submit" disabled={isLoadingRows}>
-          {isLoadingRows ? 'Searching...' : 'Search'}
-        </button>
-      </form>
-
-      <p className="muted">
-        {rows.length > 0
-          ? `Showing ${offset + 1}-${offset + rows.length} of ${totalRows} rows`
-          : `Showing 0 of ${totalRows} rows`}
-      </p>
-
-      {rows.length > 0 ? (
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                {Object.keys(rows[0]).map((column) => (
-                  <th key={column}>{column}</th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {rows.map((row, rowIndex) => (
-                <tr key={rowIndex}>
-                  {Object.values(row).map((value, columnIndex) => (
-                    <td key={columnIndex}>{String(value)}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p>No rows found.</p>
       )}
 
-      <div className="pagination">
-      <button
-        type="button"
-        onClick={handlePreviousPage}
-        disabled={isLoadingRows || !canGoPrevious}
-      >
-        Previous
-      </button>
+      {error && (
+        <p className="error-message">
+          {error}
+        </p>
+      )}
 
-      <span>
-        Page {currentPage} of {totalPages}
-      </span>
+      <UploadDataset
+        selectedFile={selectedFile}
+        isUploading={isUploading}
+        onFileChange={handleFileChange}
+        onUpload={handleUpload}
+      />
 
-      <button
-        type="button"
-        onClick={handleNextPage}
-        disabled={isLoadingRows || !canGoNext}
-      >
-        Next
-      </button>
-    </div>
-    </section>
-  )}
+      {hasDataset && (
+        <DataPreview
+          rows={rows}
+          totalRows={totalRows}
+          offset={offset}
+          searchText={searchText}
+          isLoadingRows={isLoadingRows}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          canGoPrevious={canGoPrevious}
+          canGoNext={canGoNext}
+          onSearchTextChange={setSearchText}
+          onSearch={handleSearch}
+          onPreviousPage={handlePreviousPage}
+          onNextPage={handleNextPage}
+        />
+      )}
+
+      {hasDataset && (
+        <AskAi
+          question={question}
+          answer={answer}
+          isAsking={isAsking}
+          onQuestionChange={setQuestion}
+          onAsk={handleAsk}
+        />
+      )}
     </main>
   );
 }

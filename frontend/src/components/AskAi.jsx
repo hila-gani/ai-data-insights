@@ -8,7 +8,7 @@ function AskAi({
   onAsk,
 }) {
   return (
-    <section className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
+    <section className="flex-1 flex flex-col min-h-0 rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex items-center gap-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-foreground">
           <Sparkles className="h-4 w-4" aria-hidden="true" />
@@ -24,7 +24,7 @@ function AskAi({
       </p>
 
       {/* Chat thread */}
-      <div className="mt-4 space-y-3">
+      <div className="mt-4 flex-1 overflow-y-auto space-y-3 pr-1">
         {!answer && !isAsking && (
           <div className="rounded-xl border border-dashed border-border bg-muted/40 px-3 py-6 text-center text-xs text-muted-foreground">
             Your conversation will appear here.

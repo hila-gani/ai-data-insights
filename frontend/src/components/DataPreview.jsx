@@ -18,7 +18,7 @@ function DataPreview({
   const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
 
   return (
-    <section className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <section className="flex-1 flex flex-col min-h-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       {/* Header */}
       <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
@@ -67,7 +67,7 @@ function DataPreview({
 
       {/* Table */}
       {rows.length > 0 ? (
-        <div className="overflow-x-auto">
+        <div className="overflow-y-auto flex-1">
           <table className="w-full border-collapse text-left text-sm">
             <thead className="sticky top-0 bg-muted/70 backdrop-blur">
               <tr>
@@ -91,8 +91,7 @@ function DataPreview({
                   {columns.map((column) => (
                     <td
                       key={column}
-                      className="max-w-xs truncate whitespace-nowrap px-4 py-2.5 text-card-foreground"
-                      title={String(row[column] ?? '')}
+                      className="max-w-35 truncate whitespace-nowrap px-4 py-2.5 text-card-foreground hover:whitespace-normal hover:max-h-none"
                     >
                       {String(row[column] ?? '')}
                     </td>
@@ -103,7 +102,7 @@ function DataPreview({
           </table>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
           <Table2 className="h-8 w-8 text-muted-foreground/50" aria-hidden="true" />
           <p className="text-sm font-medium text-card-foreground">No rows found</p>
           <p className="text-xs text-muted-foreground">

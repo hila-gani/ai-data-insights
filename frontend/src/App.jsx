@@ -19,6 +19,7 @@ function App() {
   const [searchText, setSearchText] = useState('');
   const [isLoadingRows, setIsLoadingRows] = useState(false);
   const [hasDataset, setHasDataset] = useState(false);
+  const [activeTab, setActiveTab] = useState('upload');
 
   const [offset, setOffset] = useState(0);
 
@@ -75,6 +76,7 @@ function App() {
       setHasDataset(true);  
       setQuestion('');
       setAnswer('');
+      setActiveTab('ask-ai');
       
       await loadRows('', 0);
 
@@ -169,7 +171,7 @@ function App() {
   const canGoNext = offset + PAGE_SIZE < totalRows;
 
   return (
-    <div className="min-h-screen font-sans">
+    <div className="h-screen flex flex-col font-sans overflow-hidden">
       {/* Top navigation */}
       <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -196,7 +198,7 @@ function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 flex flex-col px-4 py-6 sm:px-6 lg:px-8 overflow-hidden min-h-0">
         {/* Status banners */}
         {message && (
           <div className="mb-4 flex items-start gap-3 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-foreground">
@@ -249,27 +251,62 @@ function App() {
           </div>
         ) : (
           /* Two-column dashboard layout */
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="flex flex-col gap-6 flex-1 min-h-0 overflow-hidden lg:flex-row">
             {/* Left sidebar */}
-            <aside className="flex flex-col gap-6 lg:sticky lg:top-24 lg:self-start">
-              <UploadDataset
-                selectedFile={selectedFile}
-                isUploading={isUploading}
-                onFileChange={handleFileChange}
-                onUpload={handleUpload}
-              />
+            <aside className="flex flex-col gap-4 w-full shrink-0 lg:w-[360px] h-full overflow-hidden">
+              {/* Sidebar Tabs */}
+              <div className="flex rounded-xl bg-muted p-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('upload')}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === 'upload'
+                      ? 'bg-card text-card-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Upload Dataset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('ask-ai')}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === 'ask-ai'
+                      ? 'bg-card text-card-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Ask AI
+                </button>
+              </div>
 
-              <AskAi
-                question={question}
-                answer={answer}
-                isAsking={isAsking}
-                onQuestionChange={setQuestion}
-                onAsk={handleAsk}
-              />
+              {/* Tab contents */}
+              <div className="flex-1 min-h-0 flex flex-col">
+                {activeTab === 'upload' && (
+                  <div className="overflow-y-auto pr-1">
+                    <UploadDataset
+                      selectedFile={selectedFile}
+                      isUploading={isUploading}
+                      onFileChange={handleFileChange}
+                      onUpload={handleUpload}
+                    />
+                  </div>
+                )}
+
+                {activeTab === 'ask-ai' && (
+                  <AskAi
+                    question={question}
+                    answer={answer}
+                    isAsking={isAsking}
+                    onQuestionChange={setQuestion}
+                    onAsk={handleAsk}
+                  />
+                )}
+              </div>
             </aside>
 
             {/* Right main content */}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1 flex flex-col min-h-0">
               <DataPreview
                 rows={rows}
                 totalRows={totalRows}

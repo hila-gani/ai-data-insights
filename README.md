@@ -1,18 +1,18 @@
 # AI Data Insights CSV Analyzer
 
-A full-stack, AI-powered interactive CSV exploration application. Users can upload arbitrary CSV files, search and preview tabular rows, and ask complex natural-language questions to receive direct answers synthesized by Gemini LLM (using dynamic SQL query generation and execution).
+A full-stack, AI-powered interactive CSV exploration application. Users can upload CSV datasets, search and preview tabular rows, and ask natural-language analytical questions to receive direct answers synthesized by the Gemini LLM, using dataset metadata, sample context, and dynamic SQL query generation when needed.
 
 ---
 
 ## 1. Project Overview
 
-The **AI Data Insights CSV Analyzer** is designed to bridge the gap between non-technical users and structured databases. By combining a modern, interactive React user interface with a robust FastAPI backend, the system allows users to upload any CSV dataset, browse records with live pagination and search, and ask free-form analytical questions. The backend automatically determines the best answering pathway (direct pandas metadata inspection, summary synthesis, or dynamically generated SQLite query execution) to provide accurate answers.
+The **AI Data Insights CSV Analyzer** is designed to bridge the gap between non-technical users and structured databases. By combining a modern, interactive React user interface with a robust FastAPI backend, the system allows users to upload CSV dataset, browse records with live pagination and search, and ask free-form analytical questions. The backend automatically determines the best answering pathway (direct pandas metadata inspection, summary synthesis, or dynamically generated SQLite query execution) to provide accurate answers.
 
 ---
 
 ## 2. Architecture Overview
 
-The system utilizes a clean, decoupled architecture:
+The system uses a clean, decoupled architecture:
 
 ```
 [ Frontend: React + Vite ] 
@@ -20,7 +20,7 @@ The system utilizes a clean, decoupled architecture:
          ▼ (HTTP POST / GET Requests)
 [ Backend: FastAPI Web Server ]
          │
-         ├─► [ LLM Services: Gemini Client (gemini-3.5-flash) ]
+         ├─► [ LLM Services: Gemini API Client ]
          │     ├── Route Classification & SQL Generation
          │     └── Final Factual Response Synthesis
          │
@@ -32,13 +32,13 @@ The system utilizes a clean, decoupled architecture:
 1. **Upload & Preview**: The React frontend uploads a CSV file as `FormData` to the FastAPI backend. The backend reads the CSV into memory using `pandas` and computes structural summaries.
 2. **Interactive Browsing**: The frontend requests paginated records from the `/rows` endpoint, supporting filter terms mapped via Pandas vector operations.
 3. **Smart Question Routing**: When a question is submitted to `/ask`, the backend routes it using a dedicated classification layer into one of 5 precise strategies:
-   - `summary_only`: For high-level dataset inspection. Instead of just returning column names, this triggers a comprehensive metadata extraction service using Pandas. It synthesizes structural dimension statistics (`df.shape`), column data type mappings (`df.dtypes`), full descriptive statistical distributions (`df.describe(include='all')`), and a safe data preview layout (`df.head(3)`), allowing the LLM to answer holistic data profile questions efficiently without needing SQL overhead.
+   - `summary_only`: For high-level dataset inspection questions. The backend builds a Pandas-based dataset summary, including dataset shape, column data types, descriptive statistics, and a small preview of the first rows, allowing the LLM to answer structural questions without unnecessary SQL execution.
    - `sample_rows_only`: For qualitative questions that can be answered by inspecting a small subset or head of the dataset without aggregation.
    - `sql_required`: For complex logical queries, filtering, calculations, and structured aggregations requiring full dynamic SQL execution.
    - `hybrid`: For multi-faceted questions needing both structural summaries and specific query execution data to synthesize an accurate answer.
    - `not_answerable`: For ambiguous queries, out-of-scope prompts, or questions completely unrelated to the uploaded dataset.
-4. **SQL Gen & Safe Execution**: If SQL is required, Gemini generates a `SELECT` statement. The query undergoes strict keyword matching to prevent dangerous SQL injection or mutations, executes against an in-memory/temporary SQLite file populated from the DataFrame, and returns the result to the LLM.
-5. **Answer Synthesis**: The LLM synthesizes a short, human-readable answer strictly backed by the SQL results and sample context, preventing hallucinations.
+4. **SQL Generation & Read-Only Execution**: If SQL is required, Gemini generates a `SELECT` statement. Before execution, the backend validates the query as a single read-only SQL statement: comments and multiple statements are rejected, only `SELECT` queries are allowed, destructive SQL keywords are blocked, and a default `LIMIT 100` is applied when no limit is provided. The approved query then runs against a temporary SQLite database populated from the uploaded DataFrame, and the result is passed back to the LLM for answer synthesis.
+5. **Answer Synthesis**: The LLM synthesizes a short, human-readable answer grounded in the SQL results, dataset metadata, and sample context provided by the backend.
 
 ---
 
@@ -135,13 +135,12 @@ VITE_API_BASE_URL=http://localhost:8001
 
 ---
 
-## 6. What I'd Do Next (Production Readiness Roadmap)
+## 6. What I'd Do Next
 
-Based on manual quality assurance and architectural review, the following enhancements are planned for future releases:
+Given more time, I would improve the application in the following ways:
 
-*   **Analytical Ambiguity Calibration**: Improve the router and system prompts so the LLM explicitly states its assumptions when metrics like "most popular" or "best" are ambiguous (e.g. asking whether popularity is measured by transaction count, review score, or sales volume). This will reduce defensive over-refusal and increase query accuracy.
-*   **Tie-Breaking SQL Logic**: Upgrade the SQL code generation framework to detect ties (multiple rows sharing identical min/max values) instead of blindly relying on `LIMIT 1`. The LLM should automatically structure queries to handle ranks or return all matching records in a tied state.
-* **Enterprise-Grade Security Guardrails**: While the current implementation successfully mitigates prompt injections and jailbreak attempts through strict **Context Anchoring** and robust system instructions (forcing the LLM to strictly bound its answers to the provided metadata context), a production release would benefit from an isolated, dedicated security layer (such as Llama Guard or NeMo Guardrails). This would provide pre-execution string sanitation and post-generation compliance checking to implement a true "Defense in Depth" security model.
-*   **Conversation History & Stateful Chat UI**: Transition the frontend to a multi-turn conversational chat layout, maintaining session-based context in the backend (using redis or state caches) so users can ask follow-up questions within the scope of their previous queries.
-*   **Persistent Database Storage (PostgreSQL/MySQL)**: Move away from temporary SQLite files and in-memory execution to a persistent database. This will support larger datasets (increasing scalability), allow index optimization for sub-second performance, and enable user accounts to securely save and load previously uploaded datasets.
-*   **API Resiliency & Fallbacks**: Enhance the frontend error-handling state (`aiError`) by introducing backend-side retry mechanisms with jitter, and implementing alternative LLM fallbacks (e.g. Claude or GPT) in case the primary Gemini API experiences rate limits or quota exhaustion.
+* **Analytical Ambiguity Handling**: Improve the routing and prompts so the system explicitly states assumptions for ambiguous terms such as "most popular", "best", or "highest performing".
+* **Tie-Aware SQL Generation**: Improve generated SQL so min/max and ranking questions can return all tied rows instead of relying on `LIMIT 1`.
+* **Conversation History**: Add a session-based chat flow so users can ask follow-up questions about the same uploaded dataset.
+* **Persistent Database Storage**: Replace temporary SQLite execution with PostgreSQL or MySQL storage to support larger datasets, indexing, and saved user datasets.
+* **Security & Resiliency Layer**: The current implementation uses prompt-level instructions and read-only execution guardrails to reduce the risk of basic jailbreaks, prompt-injection attempts, and unsafe LLM-generated SQL. In a production release, I would add an isolated security layer (e.g., Llama Guard) for prompt-injection filtering, stricter input sanitization, backend API retries, and fallback LLM providers.

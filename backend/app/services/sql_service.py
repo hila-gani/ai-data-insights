@@ -25,7 +25,7 @@ DANGEROUS_KEYWORDS = [
 
 
 def execute_query(df: pd.DataFrame, query: str, table_name: str = "dataset") -> dict:
-    """Execute a validated SELECT query against an in-memory SQLite table."""
+    """Execute a validated SELECT query against a temporary SQLite database."""
     if df is None or df.empty:
         return {"rows": [], "columns": [], "row_count": 0, "error": "Dataset is empty."}
 

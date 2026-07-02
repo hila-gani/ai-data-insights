@@ -14,12 +14,6 @@ SQL_RETRIES = 2
 
 def answer_question(question: str, dataset: pd.DataFrame, dataset_summary: str) -> dict:
     """Route the user's question and produce a short factual answer."""
-    if dataset is None:
-        return {"answer": "No dataset has been uploaded yet.", "route": "error"}
-
-    if dataset.empty:
-        return {"answer": "The uploaded dataset is empty.", "route": "error"}
-
     sample_rows = dataset.head(5).to_csv(index=False)
     columns = dataset.columns.tolist()
 
@@ -104,8 +98,6 @@ def answer_without_sql(question: str, dataset_summary: str, sample_rows: str, ro
     """
 
     answer = ask_gemini(prompt)
-    if isinstance(answer, dict) and answer.get("error"):
-        return {"error": answer["error"]}
     return {"answer": answer, "route": route, "reason": reason}
 
 
@@ -155,8 +147,6 @@ def answer_with_sql(
         Question: {question}
         """
         answer = ask_gemini(prompt)
-        if isinstance(answer, dict) and answer.get("error"):
-            return {"error": answer["error"]}
         return {
             "answer": answer,
             "route": route,

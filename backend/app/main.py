@@ -1,11 +1,13 @@
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import io
 import os
 from app.schemas import AskRequest
 from app.processor import get_data_summary
 from app.services.ask_service import answer_question
+from app.llm.gemini_client import AIServiceError
 import pandas as pd
 from pathlib import Path
 
@@ -14,6 +16,13 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(BACKEND_DIR / ".env")
 
 app = FastAPI()
+
+@app.exception_handler(AIServiceError)
+async def ai_service_error_handler(request, exc: AIServiceError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.message}
+    )
 
 frontend_origins = os.getenv("FRONTEND_ORIGINS")
 
@@ -134,5 +143,8 @@ def ask_question(payload: AskRequest):
 
     if dataset is None:
         raise HTTPException(status_code=400, detail="No dataset uploaded yet")
+
+    if dataset.empty:
+        raise HTTPException(status_code=400, detail="The uploaded dataset is empty")
 
     return answer_question(question, dataset, dataset_summary)

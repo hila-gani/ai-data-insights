@@ -69,7 +69,7 @@ VITE_API_BASE_URL=http://localhost:8001
 
 ### Prerequisites
 - Node.js 18+
-- Python 3.10+
+- Python 3.12.x recommended (tested with Python 3.12.0)
 
 ### Setup & Run Backend
 
